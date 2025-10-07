@@ -3,7 +3,7 @@
 const char* ssid = "TP-Link_5DD0";
 const char* password = "76144493";
 const char* host = "192.168.1.101";  // PC running Hercules
-const int port = 5000;
+const int port = 10013;
 
 WiFiClient client;
 

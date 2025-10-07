@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>IoT Sensor Page</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let chart;
+
+    async function getData() {
+      try {
+        const response = await fetch('/data');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+
+        const text = await response.text();
+        console.log("Raw CSV:", text);
+        let parts = text.trim().split(",");
+
+        if (parts.length >= 6) {
+          let accel = parts.slice(0, 3).map(v => parseFloat(v));
+          let gyro  = parts.slice(3, 6).map(v => parseFloat(v));
+
+          if (accel.some(isNaN) || gyro.some(isNaN)) {
+            document.getElementById("result").innerText = "Invalid numeric data";
+            return;
+          }
+
+          document.getElementById("result").innerText =
+            "Accel: " + accel.join(", ") + " | Gyro: " + gyro.join(", ");
+
+          let az = accel[2];
+          let now = new Date().toLocaleTimeString();
+
+          if (chart) {
+            chart.data.labels.push(now);
+            chart.data.datasets[0].data.push(az);
+
+            if (chart.data.labels.length > 20) {
+              chart.data.labels.shift();
+              chart.data.datasets[0].data.shift();
+            }
+
+            chart.update();
+          }
+        } else {
+          document.getElementById("result").innerText = "Invalid CSV format";
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err);
+        document.getElementById("result").innerText = "Error fetching data";
+      }
+    }
+
+    window.onload = function() {
+      try {
+        let ctx = document.getElementById("azChart").getContext("2d");
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Accel Z (az)',
+              borderColor: 'blue',
+              fill: false,
+              data: []
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: { beginAtZero: false }
+            }
+          }
+        });
+
+
+        setInterval(getData, 1000);
+      } catch (e) {
+        console.error('Chart.js init failed:', e);
+        document.getElementById('result').innerText = 'Chart initialization failed';
+      }
+    }
+  </script>
+</head>
+<body>
+  <h1>IoT Sensor Dashboard</h1>
+  <p id="result">Waiting for data...</p>
+  <canvas id="azChart" width="400" height="200"></canvas>
+</body>
+</html>
